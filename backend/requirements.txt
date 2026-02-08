@@ -1,0 +1,7 @@
+deepagents
+langchain-openai
+langchain-anthropic
+pymongo
+motor
+python-dotenv
+pydantic
