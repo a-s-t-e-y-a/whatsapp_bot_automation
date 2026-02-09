@@ -23,7 +23,7 @@ echo "📦 Syncing Backend environment..."
 
 # 4. Start services with PM2
 echo "⚡ Starting services with PM2..."
-pm2 delete all &> /dev/null || true
+pm2 delete whatsapp-bridge backend-automation &> /dev/null || true
 pm2 start ecosystem.config.js
 
 # 5. Save PM2 list for persistence after reboot
