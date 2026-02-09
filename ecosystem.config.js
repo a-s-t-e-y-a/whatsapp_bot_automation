@@ -13,7 +13,7 @@ module.exports = {
             max_restarts: 10
         },
         {
-            name: 'backend',
+            name: 'backend-automation',
             cwd: './backend',
             script: 'uv',
             args: 'run src/main.py',
