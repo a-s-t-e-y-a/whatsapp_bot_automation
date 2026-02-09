@@ -69,19 +69,14 @@ class WebhookService:
             "analyzed": analyzed_commits
         }
     
-    def process_commits_background(
+    async def process_commits_background(
         self,
         commits: List[Dict[str, Any]],
         repo_owner: str,
         repo_url: str
     ):
         try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            result = loop.run_until_complete(
-                self.process_commits(commits, repo_owner, repo_url)
-            )
-            loop.close()
+            result = await self.process_commits(commits, repo_owner, repo_url)
             
             logger.info(
                 f"Background analysis completed: {len(result['analyzed'])} analyzed, "
