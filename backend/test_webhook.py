@@ -1,16 +1,21 @@
 import asyncio
 import httpx
 import json
+import random
+import string
 
 async def test_webhook():
+    # Generate a random SHA for every test run
+    random_sha = ''.join(random.choices(string.hexdigits.lower(), k=40))
+    
     webhook_payload = {
         "repository": {
             "html_url": "https://github.com/octocat/Hello-World"
         },
         "commits": [
             {
-                "id": "7fd1a60b01f91b314f59955a4e4d4e80d8edf11d",
-                "message": "feat: add new feature for testing",
+                "id": random_sha,
+                "message": f"feat: test commit {random_sha[:8]}",
                 "author": {
                     "username": "octocat"
                 },

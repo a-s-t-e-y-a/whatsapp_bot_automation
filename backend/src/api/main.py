@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.api.routes import repositories, settings, webhooks
+from src.api.routes import repositories, settings, webhooks, commits
 from src.integration.database import Database
 import uvicorn
 import logging
@@ -24,6 +24,7 @@ app.add_middleware(
 app.include_router(repositories.router, prefix="/api", tags=["repositories"])
 app.include_router(settings.router, prefix="/api", tags=["settings"])
 app.include_router(webhooks.router, prefix="/api", tags=["webhooks"])
+app.include_router(commits.router, prefix="/api", tags=["commits"])
 
 @app.on_event("startup")
 async def startup_db_client():
