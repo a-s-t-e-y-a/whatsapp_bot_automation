@@ -78,3 +78,8 @@ htmlcov/
 *.bak
 *.tmp
 .cache/
+
+# WhatsApp Bridge
+whatsapp-bridge/.npm-cache/
+whatsapp-bridge/auth_info_baileys/
+whatsapp-bridge/node_modules/
