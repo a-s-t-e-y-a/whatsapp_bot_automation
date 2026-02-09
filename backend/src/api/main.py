@@ -3,6 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.api.routes import repositories, settings, webhooks
 from src.integration.database import Database
 import uvicorn
+import logging
+
+# Configure logging at the root level
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 
 app = FastAPI()
 

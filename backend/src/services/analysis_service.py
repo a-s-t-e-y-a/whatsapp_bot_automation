@@ -62,8 +62,19 @@ Provide a structured analysis in JSON format with the following fields:
             ai_response = response["messages"][-1].content
             
             try:
-                analysis_data = json.loads(ai_response)
-            except json.JSONDecodeError:
+                if "```json" in ai_response:
+                    json_start = ai_response.find("```json") + 7
+                    json_end = ai_response.find("```", json_start)
+                    json_str = ai_response[json_start:json_end].strip()
+                    analysis_data = json.loads(json_str)
+                elif "```" in ai_response:
+                    json_start = ai_response.find("```") + 3
+                    json_end = ai_response.find("```", json_start)
+                    json_str = ai_response[json_start:json_end].strip()
+                    analysis_data = json.loads(json_str)
+                else:
+                    analysis_data = json.loads(ai_response)
+            except (json.JSONDecodeError, ValueError) as e:
                 analysis_data = {
                     "summary": commit_data.get("message", "")[:100],
                     "details": ai_response,

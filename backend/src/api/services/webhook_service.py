@@ -1,6 +1,10 @@
 from src.integration.repositories import RepositoryDAO
 from src.services.analysis_service import AnalysisService
 from typing import Dict, List, Any
+import logging
+import asyncio
+
+logger = logging.getLogger(__name__)
 
 class WebhookService:
     def __init__(self):
@@ -64,3 +68,24 @@ class WebhookService:
             "skipped": skipped_commits,
             "analyzed": analyzed_commits
         }
+    
+    def process_commits_background(
+        self,
+        commits: List[Dict[str, Any]],
+        repo_owner: str,
+        repo_url: str
+    ):
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            result = loop.run_until_complete(
+                self.process_commits(commits, repo_owner, repo_url)
+            )
+            loop.close()
+            
+            logger.info(
+                f"Background analysis completed: {len(result['analyzed'])} analyzed, "
+                f"{len(result['skipped'])} skipped for {repo_url}"
+            )
+        except Exception as e:
+            logger.error(f"Background analysis failed for {repo_url}: {e}")

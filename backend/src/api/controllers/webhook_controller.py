@@ -1,9 +1,12 @@
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Request, BackgroundTasks
 from src.api.services.webhook_service import WebhookService
 import hmac
 import hashlib
 import json
 from typing import Dict, Any
+import logging
+
+logger = logging.getLogger(__name__)
 
 class WebhookController:
     def __init__(self):
@@ -19,7 +22,11 @@ class WebhookController:
         expected_signature = "sha256=" + hash_object.hexdigest()
         return hmac.compare_digest(signature, expected_signature)
 
-    async def handle_github_webhook(self, request: Request) -> Dict[str, Any]:
+    async def handle_github_webhook(
+        self, 
+        request: Request, 
+        background_tasks: BackgroundTasks
+    ) -> Dict[str, Any]:
         signature = request.headers.get("X-Hub-Signature-256")
         if not signature:
             raise HTTPException(status_code=400, detail="Signature missing")
@@ -45,15 +52,20 @@ class WebhookController:
             return {"status": "ok", "message": "No commits to process"}
 
         repo_owner = repo_data.get("owner")
-        result = await self.webhook_service.process_commits(commits, repo_owner, repo_url)
+        
+        background_tasks.add_task(
+            self.webhook_service.process_commits_background,
+            commits,
+            repo_owner,
+            repo_url
+        )
+        
+        logger.info(f"Queued {len(commits)} commits for analysis from {repo_url}")
 
         return {
-            "status": "ok",
-            "message": "Webhook processed successfully",
-            "processed": len(result["processed"]),
-            "skipped": len(result["skipped"]),
-            "analyzed": len(result["analyzed"]),
-            "commits_analyzed": result["analyzed"],
-            "skipped_commits": result["skipped"]
+            "status": "accepted",
+            "message": "Webhook received and queued for processing",
+            "commits_queued": len(commits),
+            "repository": repo_url
         }
 
