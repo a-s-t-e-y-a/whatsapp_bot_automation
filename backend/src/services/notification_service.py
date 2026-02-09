@@ -19,7 +19,6 @@ class GoogleChatAdapter(NotificationAdapter):
         self.settings_dao = SettingsDAO()
 
     async def send_report(self, repo_name: str, report_text: str) -> bool:
-        # Priority: 1. Manual passed URL, 2. Database setting, 3. Environment variable
         webhook_url = self.manual_url
         if not webhook_url:
             webhook_url = await self.settings_dao.get_setting("google_chat_webhook_url")
@@ -32,7 +31,7 @@ class GoogleChatAdapter(NotificationAdapter):
         
         # Format the message for Google Chat
         message = {
-            "text": f"*Daily Report: {repo_name}*\n\n{report_text}"
+            "text": f"*Daily Report*\n\n{report_text}"
         }
         
         try:
@@ -62,7 +61,7 @@ class SlackAdapter(NotificationAdapter):
         
         # Format the message for Slack (Markdown)
         message = {
-            "text": f"*Daily Report: {repo_name}*\n\n{report_text}"
+            "text": f"*Daily Report*\n\n{report_text}"
         }
         
         try:
@@ -75,9 +74,10 @@ class SlackAdapter(NotificationAdapter):
             return False
 
 class WhatsAppAdapter(NotificationAdapter):
-    """Future implementation for WhatsApp using a specific API/Provider"""
+    """Real implementation for WhatsApp using the Baileys bridge service"""
     def __init__(self):
         self.settings_dao = SettingsDAO()
+        self.bridge_url = os.getenv("WHATSAPP_BRIDGE_URL", "http://localhost:8001")
 
     async def send_report(self, repo_name: str, report_text: str) -> bool:
         wa_group_id = await self.settings_dao.get_setting("wa_group_id")
@@ -85,9 +85,22 @@ class WhatsAppAdapter(NotificationAdapter):
             logger.error("WhatsApp Group ID not configured")
             return False
             
-        logger.info(f"WhatsApp target requested for {repo_name} (Group: {wa_group_id}). Integration pending.")
-        # In the future, this would call a WhatsApp API service
-        return False
+        message = f"*Daily Report*\n\n{report_text}"
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.bridge_url}/api/whatsapp/send",
+                    json={
+                        "jid": wa_group_id,
+                        "message": message
+                    }
+                )
+                response.raise_for_status()
+                return response.json().get("success", False)
+        except Exception as e:
+            logger.error(f"Failed to send report to WhatsApp via bridge: {e}")
+            return False
 
 class NotificationService:
     def __init__(self):
