@@ -11,7 +11,7 @@ repo_dao = RepositoryDAO()
 
 @router.post("/repositories", response_model=RepositoryResponse)
 async def add_repository(repo: RepositoryCreate):
-    result = await repo_dao.add_repository(repo.url, repo.owner, repo.repo, repo.secret, repo.github_token)
+    result = await repo_dao.add_repository(repo.url, repo.owner, repo.repo, repo.secret)
     return {
         "url": repo.url,
         "owner": repo.owner,
@@ -38,7 +38,7 @@ async def delete_repository(repo_id: str):
 
 @router.put("/repositories/{repo_id}", response_model=RepositoryResponse)
 async def update_repository(repo_id: str, repo: RepositoryCreate):
-    result = await repo_dao.update_repository(repo_id, repo.url, repo.owner, repo.repo, repo.secret, repo.github_token)
+    result = await repo_dao.update_repository(repo_id, repo.url, repo.owner, repo.repo, repo.secret)
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Repository not found")
     return {
@@ -78,14 +78,21 @@ async def github_webhook(request: Request):
         raise HTTPException(status_code=400, detail="Signature missing")
 
     body = await request.body()
+    payload = json.loads(body)
     
-    # Optional: Verify signature if secret is configured
-    if Config.GITHUB_WEBHOOK_SECRET:
-        hash_object = hmac.new(Config.GITHUB_WEBHOOK_SECRET.encode(), msg=body, digestmod=hashlib.sha256)
+    repo_url = payload.get("repository", {}).get("html_url")
+    if not repo_url:
+        raise HTTPException(status_code=400, detail="Repository URL missing")
+    
+    repo_data = await repo_dao.collection.find_one({"url": repo_url})
+    if not repo_data:
+        raise HTTPException(status_code=404, detail="Repository not registered")
+    
+    webhook_secret = repo_data.get("secret")
+    if webhook_secret:
+        hash_object = hmac.new(webhook_secret.encode(), msg=body, digestmod=hashlib.sha256)
         expected_signature = "sha256=" + hash_object.hexdigest()
         if not hmac.compare_digest(signature, expected_signature):
             raise HTTPException(status_code=401, detail="Invalid signature")
-
-    payload = json.loads(body)
-    # TODO: Trigger commit analysis logic
-    return {"status": "ok"}
+    
+    return {"status": "ok", "message": "Webhook received successfully"}
