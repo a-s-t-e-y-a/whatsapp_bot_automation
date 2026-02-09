@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Plus, Github, RefreshCw, Pencil, Trash2, History, ExternalLink, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock } from "lucide-react";
+import { Plus, Github, RefreshCw, Pencil, Trash2, History, ExternalLink, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Send } from "lucide-react";
 import { useRepositories, type Repository } from "@/hooks/useRepositories";
 import { useCommits } from "@/hooks/useCommits";
 
@@ -61,12 +61,30 @@ export default function Dashboard() {
     const [selectedRepo, setSelectedRepo] = useState<Repository | null>(null);
     const [commitPage, setCommitPage] = useState(1);
     const [filterDate, setFilterDate] = useState<string>("");
+    const [isReportOpen, setIsReportOpen] = useState(false);
+    const [reportRepo, setReportRepo] = useState<Repository | null>(null);
 
-    const { reposQuery, addRepoMutation, deleteRepoMutation, updateRepoMutation } = useRepositories();
+    const { reposQuery, addRepoMutation, deleteRepoMutation, updateRepoMutation, sendReportMutation } = useRepositories();
     const { commitsQuery } = useCommits(selectedRepo?.url || null, {
         page: commitPage,
         date: filterDate || undefined
     });
+
+    const onSendReport = (repo: Repository, target: string = "google") => {
+        sendReportMutation.mutate({ repoId: repo.id, target }, {
+            onSuccess: (data) => {
+                if (data.status === "success") {
+                    alert(`Daily report sent successfully for ${repo.repo} to ${target}!`);
+                    setIsReportOpen(false);
+                } else {
+                    alert(`Failed to send report: ${data.message || "Unknown error"}`);
+                }
+            },
+            onError: (error) => {
+                alert(`Error sending report: ${error instanceof Error ? error.message : "Network error"}`);
+            }
+        });
+    };
 
     const {
         register,
@@ -486,6 +504,62 @@ export default function Dashboard() {
                 </AlertDialogContent>
             </AlertDialog>
 
+            <Dialog open={isReportOpen} onOpenChange={setIsReportOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Send Daily Report</DialogTitle>
+                        <DialogDescription>
+                            Where would you like to send the report for <strong>{reportRepo?.repo}</strong>?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <Button
+                            variant="outline"
+                            className="justify-start gap-3 h-12"
+                            onClick={() => reportRepo && onSendReport(reportRepo, "google")}
+                            disabled={sendReportMutation.isPending}
+                        >
+                            <div className="w-6 h-6 rounded bg-emerald-100 flex items-center justify-center text-xs">G</div>
+                            Google Chat
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className="justify-start gap-3 h-12"
+                            onClick={() => reportRepo && onSendReport(reportRepo, "slack")}
+                            disabled={sendReportMutation.isPending}
+                        >
+                            <div className="w-6 h-6 rounded bg-purple-100 flex items-center justify-center text-xs">S</div>
+                            Slack
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className="justify-start gap-3 h-12"
+                            onClick={() => reportRepo && onSendReport(reportRepo, "whatsapp")}
+                            disabled={sendReportMutation.isPending}
+                        >
+                            <div className="w-6 h-6 rounded bg-green-100 flex items-center justify-center text-xs">W</div>
+                            WhatsApp (Alpha)
+                        </Button>
+                        <div className="relative py-2">
+                            <div className="absolute inset-0 flex items-center">
+                                <span className="w-full border-t" />
+                            </div>
+                            <div className="relative flex justify-center text-xs uppercase">
+                                <span className="bg-background px-2 text-muted-foreground">OR</span>
+                            </div>
+                        </div>
+                        <Button
+                            className="justify-start gap-3 h-12 bg-primary text-primary-foreground hover:bg-primary/90"
+                            onClick={() => reportRepo && onSendReport(reportRepo, "all")}
+                            disabled={sendReportMutation.isPending}
+                        >
+                            <RefreshCw className={`h-4 w-4 ${sendReportMutation.isPending ? 'animate-spin' : ''}`} />
+                            Send to All Platforms
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 <Card className="overflow-hidden border-t-4 border-t-blue-500">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -556,6 +630,23 @@ export default function Dashboard() {
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    disabled={sendReportMutation.isPending && reportRepo?.id === repo.id}
+                                                    onClick={() => {
+                                                        setReportRepo(repo);
+                                                        setIsReportOpen(true);
+                                                    }}
+                                                    className="border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300"
+                                                >
+                                                    {sendReportMutation.isPending && reportRepo?.id === repo.id ? (
+                                                        <RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                                                    ) : (
+                                                        <Send className="mr-1.5 h-3.5 w-3.5" />
+                                                    )}
+                                                    Daily Report
+                                                </Button>
                                                 <Button
                                                     variant="secondary"
                                                     size="sm"

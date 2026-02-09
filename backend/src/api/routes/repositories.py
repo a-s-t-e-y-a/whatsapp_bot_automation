@@ -43,3 +43,28 @@ async def update_repository(repo_id: str, repo: RepositoryCreate):
         "repo": repo.repo,
         "id": repo_id
     }
+
+from src.services.report_service import ReportService
+report_service = ReportService()
+
+@router.post("/repositories/{repo_id}/report")
+async def send_repository_report(repo_id: str, target: str = "google"):
+    import bson
+    try:
+        repo = await repo_dao.collection.find_one({"_id": bson.ObjectId(repo_id)})
+    except Exception:
+        repo = await repo_dao.collection.find_one({"url": repo_id})
+        
+    if not repo:
+        raise HTTPException(status_code=404, detail="Repository not found")
+    
+    result = await report_service.generate_and_send_daily_report(
+        repo_url=repo["url"], 
+        repo_name=repo["repo"],
+        target=target
+    )
+    
+    if not result["success"]:
+        return {"status": "error", "message": result.get("message", "Failed to send report")}
+    
+    return {"status": "success", "report": result["report"]}

@@ -49,5 +49,12 @@ export const useRepositories = () => {
         },
     });
 
-    return { reposQuery, addRepoMutation, deleteRepoMutation, updateRepoMutation };
+    const sendReportMutation = useMutation({
+        mutationFn: async ({ repoId, target = "google" }: { repoId: string, target?: string }) => {
+            const { data } = await api.post(`/repositories/${repoId}/report?target=${target}`);
+            return data;
+        },
+    });
+
+    return { reposQuery, addRepoMutation, deleteRepoMutation, updateRepoMutation, sendReportMutation };
 };
