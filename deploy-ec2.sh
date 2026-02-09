@@ -16,7 +16,7 @@ fi
 
 # 3. Build/Install Dependencies
 echo "📦 Installing Bridge dependencies..."
-(cd whatsapp-bridge && pnpm install)2
+(cd whatsapp-bridge && pnpm install)
 
 echo "📦 Syncing Backend environment..."
 (cd backend && uv sync)
